@@ -89,6 +89,16 @@ struct ContentView: View {
                     }
                 }
                 .padding()
+                
+                // Navigation to Workout Logs
+                NavigationLink(destination: WorkoutLogsView()) {
+                    Text("Workout Logs")
+                        .frame(width: 200, height: 50)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .clipShape(Capsule())
+                }
+                .padding(.bottom, 20)
             }
             .navigationTitle("FitJit")
             .toolbar {
@@ -161,15 +171,6 @@ struct PresetTimersView: View {
 struct CustomWorkoutView: View {
     var body: some View {
         Text("Custom Workout")
-            .font(.title)
-            .padding()
-    }
-}
-
-// Workout Logs View Placeholder
-struct WorkoutLogsView: View {
-    var body: some View {
-        Text("Workout Logs")
             .font(.title)
             .padding()
     }

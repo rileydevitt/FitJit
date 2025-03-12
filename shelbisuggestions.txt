@@ -1,0 +1,7 @@
+TO BE IMPLEMTNED
+
+Pilates second (longer?)
+Triangle progress bar (halfway point shown)
+Creating own presets (with exercise names)
+Spotify Implementation
+Countdown voice/sounds
