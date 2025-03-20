@@ -1,13 +1,15 @@
 import SwiftUI
 
 struct WorkoutTypeSelectionView: View {
+    @StateObject private var presetManager = PresetManager()
+    
     var body: some View {
         VStack(spacing: 20) {
             Text("Select Workout Type")
                 .font(.largeTitle)
                 .padding(.top, 20)
             
-            NavigationLink(destination: CircuitView()) {
+            NavigationLink(destination: CircuitView(presetManager: presetManager)) {
                 Text("Circuit")
                     .frame(width: 200, height: 50)
                     .background(Theme.secondary)

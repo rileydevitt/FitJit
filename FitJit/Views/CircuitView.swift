@@ -1,15 +1,45 @@
 import SwiftUI
 
 struct CircuitView: View {
-    @Environment(\.presentationMode) var presentationMode
-    @State private var circuitAmount: Double = 0
-    @State private var circuitRest: Double = 0
-    @State private var roundsAmount: Double = 0
-    @State private var roundsRest: Double = 0
-    @State private var exercisesAmount: Double = 0
-    @State private var exercisesTime: Double = 0
-    @State private var exercisesRest: Double = 0
-    @State private var addBuffer: Bool = false
+    @ObservedObject var presetManager: PresetManager  // Change from @StateObject to @ObservedObject
+    @Environment(\.dismiss) var dismiss
+    @State private var showingSavePreset = false
+    @State private var showingSaveSheet = false
+    @State private var showingRunCircuit = false
+    @State private var presetName = ""
+    
+    // State variables for circuit configuration
+    @State private var circuitAmount: Double = 1
+    @State private var circuitRest: Double = 60
+    @State private var roundsAmount: Double = 1
+    @State private var roundsRest: Double = 30
+    @State private var exercisesAmount: Double = 1
+    @State private var exercisesTime: Double = 45
+    @State private var exercisesRest: Double = 15
+    @State private var addBuffer: Bool = true
+    
+    // Default initializer
+    init(presetManager: PresetManager) {
+        self._presetManager = ObservedObject(wrappedValue: presetManager)
+    }
+    
+    // Preset initializer
+    init(preset: Preset, presetManager: PresetManager) {
+        self._presetManager = ObservedObject(wrappedValue: presetManager)
+        _circuitAmount = State(initialValue: Double(preset.exercises[0].sets))
+        _circuitRest = State(initialValue: Double(preset.exercises[0].rest))
+        _exercisesTime = State(initialValue: Double(preset.exercises[0].duration))
+        
+        // Set other values to match the preset
+        _roundsAmount = State(initialValue: 1)
+        _roundsRest = State(initialValue: 30)
+        _exercisesAmount = State(initialValue: 1)
+        _exercisesRest = State(initialValue: 15)
+        _addBuffer = State(initialValue: true)
+        
+        // Automatically start the circuit when initialized from a preset
+        _showingRunCircuit = State(initialValue: true)
+    }
     
     var body: some View {
         NavigationStack {
@@ -33,33 +63,101 @@ struct CircuitView: View {
                     
                     BufferToggle(addBuffer: $addBuffer)
                     
-                    StartButton(
-                        circuitAmount: Int(circuitAmount),
-                        circuitRest: Int(circuitRest),
-                        roundsAmount: Int(roundsAmount),
-                        roundsRest: Int(roundsRest),
-                        exercisesAmount: Int(exercisesAmount),
-                        exercisesTime: Int(exercisesTime),
-                        exercisesRest: Int(exercisesRest),
-                        addBuffer: addBuffer
-                    )
+                    StartButton(action: {
+                        showingRunCircuit = true
+                    })
+                    
+                    Button(action: { showingSavePreset = true }) {
+                        Text("Save as Preset")
+                            .frame(width: 200, height: 50)
+                            .background(Theme.primary)
+                            .foregroundColor(Theme.buttonText)
+                            .clipShape(Capsule())
+                    }
+                    .padding(.vertical)
                 }
                 .padding()
             }
             .background(Theme.background)
-            .navigationTitle("Circuit")
+            //.navigationTitle("Circuit")
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
-                        presentationMode.wrappedValue.dismiss()
+                        dismiss()
                     }) {
                         Image(systemName: "arrow.left")
                             .foregroundColor(Theme.accent)
                     }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingSaveSheet = true }) {
+                        Image(systemName: "square.and.arrow.down")
+                    }
+                }
+            }
+            .alert("Save as Preset", isPresented: $showingSavePreset) {
+                TextField("Preset Name", text: $presetName)
+                Button("Cancel", role: .cancel) {
+                    presetName = ""
+                }
+                Button("Save") {
+                    saveAsPreset()
+                }
+            } message: {
+                Text("Enter a name for this preset")
+            }
+            .navigationDestination(isPresented: $showingRunCircuit) {
+                RunCircuitView(
+                    circuitAmount: Int(circuitAmount),
+                    circuitRest: Int(circuitRest),
+                    roundsAmount: Int(roundsAmount),
+                    roundsRest: Int(roundsRest),
+                    exercisesAmount: Int(exercisesAmount),
+                    exercisesTime: Int(exercisesTime),
+                    exercisesRest: Int(exercisesRest),
+                    addBuffer: addBuffer
+                )
+            }
+            .sheet(isPresented: $showingSaveSheet) {
+                NavigationStack {
+                    Form {
+                        TextField("Preset Name", text: $presetName)
+                    }
+                    .navigationTitle("Save Preset")
+                    .navigationBarItems(
+                        leading: Button("Cancel") { 
+                            showingSaveSheet = false 
+                        },
+                        trailing: Button("Save") {
+                            presetManager.saveCircuitAsPreset(
+                                name: presetName,
+                                circuitAmount: Int(circuitAmount),
+                                circuitRest: Int(circuitRest),
+                                exercisesTime: Int(exercisesTime)
+                            )
+                            showingSaveSheet = false
+                        }
+                        .disabled(presetName.isEmpty)
+                    )
+                }
+                .presentationDetents([.height(150)])
             }
         }
+    }
+    
+    private func saveAsPreset() {
+        guard !presetName.isEmpty else { return }
+        
+        presetManager.saveCircuitAsPreset(
+            name: presetName,
+            circuitAmount: Int(circuitAmount),
+            circuitRest: Int(circuitRest),
+            exercisesTime: Int(exercisesTime)
+        )
+        
+        presetName = ""
+        showingSaveSheet = false
     }
 }
 
@@ -195,26 +293,10 @@ struct BufferToggle: View {
 }
 
 struct StartButton: View {
-    let circuitAmount: Int
-    let circuitRest: Int
-    let roundsAmount: Int
-    let roundsRest: Int
-    let exercisesAmount: Int
-    let exercisesTime: Int
-    let exercisesRest: Int
-    let addBuffer: Bool
+    let action: () -> Void
     
     var body: some View {
-        NavigationLink(destination: RunCircuitView(
-            circuitAmount: circuitAmount,
-            circuitRest: circuitRest,
-            roundsAmount: roundsAmount,
-            roundsRest: roundsRest,
-            exercisesAmount: exercisesAmount,
-            exercisesTime: exercisesTime,
-            exercisesRest: exercisesRest,
-            addBuffer: addBuffer
-        )) {
+        Button(action: action) {
             Text("Start")
                 .frame(width: 200, height: 50)
                 .background(Theme.accent)
@@ -226,5 +308,5 @@ struct StartButton: View {
 }
 
 #Preview {
-    CircuitView()
+    CircuitView(presetManager: PresetManager())
 }

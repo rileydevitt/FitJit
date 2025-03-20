@@ -13,6 +13,9 @@ struct ContentView: View {
     @StateObject private var presetManager = PresetManager()
     @StateObject private var workoutLogManager = WorkoutLogManager()
     @State private var showingAddPreset = false
+    @State private var presetToDelete: Preset? = nil  // Changed from PresetWorkout to Presetanged from PresetWorkout to Preset
+    @State private var showingDeleteAlert = false
+    @State private var isEditing = false
     
     var body: some View {
         NavigationStack {
@@ -77,14 +80,35 @@ struct ContentView: View {
                             NavigationLink(destination: PresetTimersView(workoutName: preset.name)) {
                                 WorkoutSquare(
                                     title: preset.name,
-                                    color: preset.color == 0 ? Theme.primary : Theme.secondary
+                                    color: preset.color == 0 ? Theme.primary : Theme.secondary,
+                                    isEditing: isEditing,
+                                    onDelete: {
+                                        presetToDelete = preset
+                                        showingDeleteAlert = true
+                                    }
                                 )
                                 .padding(.horizontal, 8)
                             }
+                            .disabled(isEditing)
+                        }
+                        .onLongPressGesture(minimumDuration: 0.5) {
+                            withAnimation {
+                                isEditing.toggle()
+                            }
+                        }
+                        .alert("Delete Preset?", isPresented: $showingDeleteAlert, presenting: presetToDelete) { preset in
+                            Button("Delete", role: .destructive) {
+                                if let index = presetManager.presets.firstIndex(where: { $0.id == preset.id }) {
+                                    presetManager.presets.remove(at: index)
+                                }
+                            }
+                            Button("Cancel", role: .cancel) { }
+                        } message: { preset in
+                            Text("Are you sure you want to delete '\(preset.name)'?")
                         }
                         
                         Button(action: { showingAddPreset = true }) {
-                            WorkoutSquare(title: "Add Preset", color: Theme.accent)
+                            WorkoutSquare(title: "Add Preset", color: Theme.accent, isEditing: false, onDelete: nil)
                                 .padding(.horizontal, 8)
                         }
                     }
@@ -145,16 +169,31 @@ struct ContentView: View {
 struct WorkoutSquare: View {
     var title: String
     var color: Color
+    var isEditing: Bool
+    var onDelete: (() -> Void)?
     
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 15)
                 .fill(color)
                 .frame(height: 120)
+            
+            // Delete button
+            if isEditing {
+                Button(action: { onDelete?() }) {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.white, .red)
+                }
+                .offset(x: -8, y: -8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            }
+            
             Text(title)
                 .font(.headline)
                 .foregroundColor(.white)
         }
+        .modifier(JiggleModifier(isJiggling: isEditing))
     }
 }
 

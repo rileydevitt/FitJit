@@ -4,4 +4,8 @@ Pilates second (longer?)
 Triangle progress bar (halfway point shown)
 Creating own presets (with exercise names)
 Spotify Implementation
+
+AMMAR/ALEX
+Already made presets for exercises (circits) PICK 5 EXERCISES TYPE
+Social aspect. Accounts, friends, etc.
 Countdown voice/sounds
